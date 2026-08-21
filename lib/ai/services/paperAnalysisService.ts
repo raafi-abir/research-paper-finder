@@ -6,6 +6,10 @@ import {
   PaperSummarySchema,
   PaperAnalysisResult,
   PaperAnalysisSchema,
+  Methodology,
+  Findings,
+  Limitations,
+  ResearchGapItem,
 } from "../types";
 import {
   buildSummarizePrompt,
@@ -125,20 +129,24 @@ export async function analyzePaper(
 
       if (
         cached &&
+        cached.summary &&
         cached.methodology &&
-        typeof cached.methodology === "object" &&
-        Object.keys(cached.methodology).length > 0
+        typeof cached.methodology === "object"
       ) {
         return {
           summary: cached.summary,
-          keyPoints: cached.keyPoints as string[],
-          methodology: cached.methodology as any,
-          findings: cached.findings as any,
-          limitations: cached.limitations as any,
-          researchGaps: (cached.researchGaps as any) || [],
-          analysisSource: cached.analysisSource as any,
-          source: "cache",
+          keyPoints: Array.isArray(cached.keyPoints) ? (cached.keyPoints as string[]) : [],
+          methodology: cached.methodology as unknown as Methodology,
+          findings: cached.findings as unknown as Findings,
+          limitations: cached.limitations as unknown as Limitations,
+          researchGaps: Array.isArray(cached.researchGaps)
+            ? (cached.researchGaps as unknown as ResearchGapItem[])
+            : [],
+          analysisSource:
+            (cached.analysisSource as "FULL_TEXT" | "ABSTRACT" | "METADATA") || "ABSTRACT",
           model: cached.model,
+          promptVersion: cached.promptVersion,
+          source: "cache",
         };
       }
     } catch (err) {
@@ -185,7 +193,7 @@ export async function analyzePaper(
         researchGaps: result.researchGaps,
         analysisSource: paper.abstract ? "ABSTRACT" : "METADATA",
         model: provider.name,
-        promptVersion: ANALYZE_PROMPT_VERSION,
+        promptVersion: result.promptVersion || ANALYZE_PROMPT_VERSION,
       },
     });
   } catch (err) {

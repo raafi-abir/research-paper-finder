@@ -14,7 +14,7 @@ export class OpenAIProvider implements AIProvider {
 
   async generateStructured<T>(
     prompt: string,
-    schema: z.ZodType<T>,
+    schema: z.ZodType<T, z.ZodTypeDef, any>,
     systemPrompt?: string
   ): Promise<T> {
     if (!this.apiKey) {

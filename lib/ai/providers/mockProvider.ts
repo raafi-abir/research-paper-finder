@@ -16,7 +16,7 @@ export class MockAIProvider implements AIProvider {
 
   async generateStructured<T>(
     prompt: string,
-    schema: z.ZodType<T>,
+    schema: z.ZodType<T, z.ZodTypeDef, any>,
     _systemPrompt?: string
   ): Promise<T> {
     // Determine request type from prompt content
@@ -138,6 +138,8 @@ export class MockAIProvider implements AIProvider {
         },
       ],
       analysisSource: hasAbstract ? "ABSTRACT" : "METADATA",
+      promptVersion: "v1",
+      model: "mock",
     };
   }
 

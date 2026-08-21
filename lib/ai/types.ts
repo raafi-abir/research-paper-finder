@@ -65,6 +65,8 @@ export const PaperAnalysisSchema = z.object({
   limitations: LimitationsSchema,
   researchGaps: z.array(ResearchGapItemSchema).default([]),
   analysisSource: z.enum(["FULL_TEXT", "ABSTRACT", "METADATA"]).default("ABSTRACT"),
+  model: z.string().optional(),
+  promptVersion: z.string().default("v1"),
 });
 
 export type PaperAnalysisResult = z.infer<typeof PaperAnalysisSchema>;
@@ -91,11 +93,11 @@ export const PaperComparisonSchema = z.object({
   overview: z.string().describe("High-level synthesis explaining how these papers relate"),
   commonThemes: z.array(z.string()).min(1).describe("Shared research objectives or thematic patterns"),
   comparison: z.array(PaperComparisonItemSchema).min(1).max(5),
-  methodologicalDifferences: z.array(z.string()).describe("Key architectural/methodological trade-offs"),
-  findingsAgreement: z.array(z.string()).describe("Areas where the papers reach consensus"),
-  findingsDisagreement: z.array(z.string()).describe("Areas where findings or methodologies diverge"),
-  researchGaps: z.array(z.string()).describe("Unresolved questions across the collection of papers"),
-  promisingDirections: z.array(z.string()).describe("Promising research directions suggested by collective evidence"),
+  methodologicalDifferences: z.array(z.string()).default([]).describe("Key architectural/methodological trade-offs"),
+  findingsAgreement: z.array(z.string()).default([]).describe("Areas where the papers reach consensus"),
+  findingsDisagreement: z.array(z.string()).default([]).describe("Areas where findings or methodologies diverge"),
+  researchGaps: z.array(z.string()).default([]).describe("Unresolved questions across the collection of papers"),
+  promisingDirections: z.array(z.string()).default([]).describe("Promising research directions suggested by collective evidence"),
 });
 
 export type PaperComparisonResult = z.infer<typeof PaperComparisonSchema>;
@@ -107,7 +109,7 @@ export interface AIProvider {
   name: string;
   generateStructured<T>(
     prompt: string,
-    schema: z.ZodType<T>,
+    schema: z.ZodType<T, z.ZodTypeDef, any>,
     systemPrompt?: string
   ): Promise<T>;
 }
