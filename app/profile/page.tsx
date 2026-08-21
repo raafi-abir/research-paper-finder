@@ -6,12 +6,13 @@ import { Navbar } from "@/components/layout/Navbar";
 import { ACADEMIC_FIELDS } from "@/lib/mockData";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, Loader2 } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [step, setStep] = useState<number>(1);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Form State
   const [selectedField, setSelectedField] = useState<string>("Electrical & Electronic Engineering");
@@ -24,8 +25,8 @@ export default function ProfilePage() {
   const [contextText, setContextText] = useState<string>(
     "I'm interested in machine learning applications in power systems, especially fault detection, renewable energy integration, and smart grids."
   );
-  const [researchLevel, setResearchLevel] = useState<string>("Graduate");
-  const [deliveryFrequency, setDeliveryFrequency] = useState<string>("Every 3 days");
+  const [researchLevel, setResearchLevel] = useState<string>("GRADUATE");
+  const [deliveryFrequency, setDeliveryFrequency] = useState<string>("EVERY_3_DAYS");
   const [papersPerDigest, setPapersPerDigest] = useState<number>(5);
   const [email, setEmail] = useState<string>("alex.chen@university.edu");
 
@@ -39,8 +40,37 @@ export default function ProfilePage() {
     }
   };
 
-  const handleFinish = () => {
-    setIsCompleted(true);
+  const handleFinish = async () => {
+    setIsSubmitting(true);
+
+    try {
+      // Map interest names to slugs
+      const interestSlugs = selectedInterests.map((name) =>
+        name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+      );
+
+      const payload = {
+        email,
+        name: email.split("@")[0] || "PaperScout User",
+        academicField: selectedField,
+        researchLevel,
+        researchContext: contextText,
+        deliveryFrequency,
+        papersPerDigest,
+        interestSlugs: interestSlugs.length > 0 ? interestSlugs : ["power-systems"],
+      };
+
+      await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      console.warn("Could not save to API endpoint, progressing with frontend state:", err);
+    } finally {
+      setIsSubmitting(false);
+      setIsCompleted(true);
+    }
   };
 
   return (
@@ -205,25 +235,29 @@ export default function ProfilePage() {
                       YOUR RESEARCH LEVEL
                     </label>
                     <div className="grid grid-cols-2 gap-2.5">
-                      {["Undergraduate", "Graduate", "PhD", "Researcher", "Professional"].map(
-                        (lvl) => {
-                          const isSelected = researchLevel === lvl;
-                          return (
-                            <button
-                              key={lvl}
-                              type="button"
-                              onClick={() => setResearchLevel(lvl)}
-                              className={`p-3 rounded-xl border text-xs font-medium text-center transition-all cursor-pointer ${
-                                isSelected
-                                  ? "border-slate-900 bg-slate-900 text-white shadow-2xs"
-                                  : "border-slate-200/80 bg-white text-slate-700 hover:border-slate-300"
-                              }`}
-                            >
-                              {lvl}
-                            </button>
-                          );
-                        }
-                      )}
+                      {[
+                        { label: "Undergraduate", value: "UNDERGRADUATE" },
+                        { label: "Graduate", value: "GRADUATE" },
+                        { label: "PhD", value: "PHD" },
+                        { label: "Researcher", value: "RESEARCHER" },
+                        { label: "Professional", value: "PROFESSIONAL" },
+                      ].map((item) => {
+                        const isSelected = researchLevel === item.value;
+                        return (
+                          <button
+                            key={item.value}
+                            type="button"
+                            onClick={() => setResearchLevel(item.value)}
+                            className={`p-3 rounded-xl border text-xs font-medium text-center transition-all cursor-pointer ${
+                              isSelected
+                                ? "border-slate-900 bg-slate-900 text-white shadow-2xs"
+                                : "border-slate-200/80 bg-white text-slate-700 hover:border-slate-300"
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -265,16 +299,16 @@ export default function ProfilePage() {
                     </label>
                     <div className="space-y-2.5">
                       {[
-                        { title: "Every 2 days", desc: "A more frequent pulse of new research." },
-                        { title: "Every 3 days", desc: "A balanced research digest." },
-                        { title: "Weekly", desc: "A quieter overview." },
+                        { value: "EVERY_2_DAYS", title: "Every 2 days", desc: "A more frequent pulse of new research." },
+                        { value: "EVERY_3_DAYS", title: "Every 3 days", desc: "A balanced research digest." },
+                        { value: "WEEKLY", title: "Weekly", desc: "A quieter overview." },
                       ].map((item) => {
-                        const isSelected = deliveryFrequency === item.title;
+                        const isSelected = deliveryFrequency === item.value;
                         return (
                           <button
-                            key={item.title}
+                            key={item.value}
                             type="button"
-                            onClick={() => setDeliveryFrequency(item.title)}
+                            onClick={() => setDeliveryFrequency(item.value)}
                             className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
                               isSelected
                                 ? "border-slate-900 bg-slate-50 shadow-2xs"
@@ -336,10 +370,17 @@ export default function ProfilePage() {
                     </Button>
                     <Button
                       variant="primary"
-                      className="w-2/3 py-3"
+                      className="w-2/3 py-3 flex items-center justify-center gap-2"
                       onClick={handleFinish}
+                      disabled={isSubmitting}
                     >
-                      Start my research feed
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                        </>
+                      ) : (
+                        "Start my research feed"
+                      )}
                     </Button>
                   </div>
                 </div>

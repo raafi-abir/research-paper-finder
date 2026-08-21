@@ -1,0 +1,218 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ResearchLevel {
+  UNDERGRADUATE
+  GRADUATE
+  PHD
+  RESEARCHER
+  PROFESSIONAL
+}
+
+enum DeliveryFrequency {
+  EVERY_2_DAYS
+  EVERY_3_DAYS
+  WEEKLY
+}
+
+enum ReportStatus {
+  DRAFT
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+enum DifficultyLevel {
+  EASY
+  MODERATE
+  ADVANCED
+}
+
+enum NoveltyLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id           String           @id @default(uuid())
+  name         String
+  email        String           @unique
+  passwordHash String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  profile      ResearchProfile?
+  reports      Report[]
+
+  @@index([email])
+}
+
+model ResearchProfile {
+  id                String                    @id @default(uuid())
+  userId            String                    @unique
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academicField     String
+  researchLevel     ResearchLevel             @default(GRADUATE)
+  researchContext   String?
+  researchGoals     Json?
+  deliveryFrequency DeliveryFrequency         @default(EVERY_3_DAYS)
+  papersPerDigest   Int                       @default(5)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  interests         ResearchProfileInterest[]
+
+  @@index([userId])
+}
+
+model Interest {
+  id          String                    @id @default(uuid())
+  name        String
+  slug        String                    @unique
+  category    String
+  description String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  profiles    ResearchProfileInterest[]
+  papers      PaperInterest[]
+
+  @@index([slug])
+  @@index([category])
+}
+
+model ResearchProfileInterest {
+  researchProfileId String
+  interestId        String
+  createdAt         DateTime        @default(now())
+  profile           ResearchProfile @relation(fields: [researchProfileId], references: [id], onDelete: Cascade)
+  interest          Interest        @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  @@id([researchProfileId, interestId])
+}
+
+model Paper {
+  id              String          @id @default(uuid())
+  title           String
+  abstract        String?
+  authors         Json
+  journal         String?
+  conference      String?
+  publicationDate DateTime?
+  doi             String?         @unique
+  url             String?
+  source          String?
+  citationCount   Int             @default(0)
+  externalId      String?
+  summary         String?
+  methodology     String?
+  keyFindings     String?
+  contributions   String?
+  limitations     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  interests       PaperInterest[]
+  reports         ReportPaper[]
+  gaps            ResearchGap[]
+  ideas           ResearchIdea[]
+  analyses        PaperAnalysis[]
+
+  @@index([publicationDate])
+  @@index([source])
+  @@index([doi])
+  @@index([externalId])
+}
+
+model PaperAnalysis {
+  id               String   @id @default(uuid())
+  paperId          String
+  paper            Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  summary          String
+  keyPoints        Json
+  methodology      Json
+  findings         Json
+  limitations      Json
+  researchGaps     Json?
+  analysisSource   String   @default("ABSTRACT")
+  model            String   @default("mock")
+  promptVersion    String   @default("v1")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([paperId])
+  @@index([promptVersion])
+}
+
+model PaperInterest {
+  paperId        String
+  interestId     String
+  relevanceScore Float?
+  createdAt      DateTime @default(now())
+  paper          Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  interest       Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  @@id([paperId, interestId])
+  @@index([interestId])
+  @@index([paperId])
+}
+
+model Report {
+  id          String        @id @default(uuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  summary     String?
+  status      ReportStatus  @default(COMPLETED)
+  periodStart DateTime?
+  periodEnd   DateTime?
+  generatedAt DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  papers      ReportPaper[]
+
+  @@index([userId])
+  @@index([generatedAt])
+  @@index([status])
+}
+
+model ReportPaper {
+  reportId  String
+  paperId   String
+  position  Int      @default(1)
+  createdAt DateTime @default(now())
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  paper     Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@id([reportId, paperId])
+}
+
+model ResearchGap {
+  id                 String   @id @default(uuid())
+  paperId            String
+  paper              Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  title              String
+  description        String
+  potentialDirection String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([paperId])
+}
+
+model ResearchIdea {
+  id          String          @id @default(uuid())
+  paperId     String
+  paper       Paper           @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  difficulty  DifficultyLevel @default(MODERATE)
+  novelty     NoveltyLevel    @default(MEDIUM)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([paperId])
+}
